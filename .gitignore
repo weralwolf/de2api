@@ -1,0 +1,4 @@
+samples/*
+*.pyc
+src/conf.py
+*~

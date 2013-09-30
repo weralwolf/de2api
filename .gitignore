@@ -2,3 +2,4 @@ samples/*
 *.pyc
 src/conf.py
 *~
+.idea/*

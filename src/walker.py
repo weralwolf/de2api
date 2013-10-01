@@ -26,6 +26,6 @@ def walk(path, file_type, recursive, parser):
     parsed_data = []
 
     for i in queue:
-        parsed_data.extend(parser.parse(i))
+        parsed_data.extend(parser.parse(i, True))
 
     return parsed_data

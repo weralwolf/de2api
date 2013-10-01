@@ -9,21 +9,21 @@ class NeTe500Ms:
     @staticmethod
     def parse_line(data_row):
         row = PlasmaLangNeTe500Ms()
-        row.orbit = data_row[0:6]
-        row.year = '19' + data_row[7:9]
-        row.day_of_year = data_row[9:12]
-        row.ut = data_row[12:21]
-        row.temp = data_row[21:28]
-        row.np = data_row[28:38]
-        row.potential = data_row[38:45]
-        row.altitude = data_row[45:53]
-        row.latitude = data_row[53:61]
-        row.longitude = data_row[61:69]
-        row.lst = data_row[69:75]
-        row.lmt = data_row[75:81]
-        row.l_sh = data_row[81:89]
-        row.inv_lat = data_row[89:97]
-        row.sza = data_row[97:106]
+        row.orbit = int(data_row[0:7].strip())
+        row.year = int('19' + data_row[7:9].strip())
+        row.day_of_year = int(data_row[9:12].strip())
+        row.ut = int(data_row[12:21].strip())
+        row.temp = float(data_row[21:28].strip())
+        row.np = float(data_row[28:38].strip())
+        row.potential = float(data_row[38:45].strip())
+        row.altitude = float(data_row[45:53].strip())
+        row.latitude = float(data_row[53:61].strip())
+        row.longitude = float(data_row[61:69].strip())
+        row.lst = float(data_row[69:75].strip())
+        row.lmt = float(data_row[75:81].strip())
+        row.l_sh = float(data_row[81:89].strip())
+        row.inv_lat = float(data_row[89:97].strip())
+        row.sza = float(data_row[97:].strip())
         return row
 
     @staticmethod

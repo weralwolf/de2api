@@ -1,5 +1,5 @@
 __author__ = 'weralwolf'
-from models.source_data import PlasmaLangNeTe500Ms
+from models.source_data import PlasmaLangNeTe500Ms, SourceFile
 
 
 class NeTe500Ms:
@@ -31,14 +31,17 @@ class NeTe500Ms:
         # reading data from current file
         data = open(datafile, 'r').readlines()
 
+        source = SourceFile(datafile)
+
         # removing 3 descriptive lines in the begin of file
         data.pop(0)
         data.pop(0)
         data.pop(0)
 
-        data_rows = []
+        #data_rows = []
 
         for data_row in data:
-            data_rows.append(NeTe500Ms.parse_line(data_row))
+            #data_rows.append(NeTe500Ms.parse_line(data_row))
+            source.data.append(NeTe500Ms.parse_line(data_row))
 
-        return data_rows
+        return [source]

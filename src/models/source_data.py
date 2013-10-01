@@ -1,8 +1,30 @@
 __author__ = 'weralwolf'
-from sqlalchemy import Column, Integer, Float
+from sqlalchemy import Column, Integer, Float, String, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship, backref
+from conf import PROJECT_DIR, data_path
+
+from os.path import abspath
 
 Base = declarative_base()
+
+
+class SourceFile(Base):
+    __tablename__ = 'source_files'
+
+    id = Column(Integer(11, unsigned=True), primary_key=True)
+    filename = Column(String(256))
+    filepath = Column(String(256))
+
+    def __init__(self, path):
+        filename = abspath(path)
+        filepath = abspath(path)
+
+        filename = filename.split('/').pop()
+        filepath = filepath.replace(data_path, '').replace(filename, '').strip('/')
+
+        self.filename = filename
+        self.filepath = filepath
 
 
 class PlasmaLangNeTe500Ms(Base):
@@ -10,6 +32,9 @@ class PlasmaLangNeTe500Ms(Base):
     __tablename__ = 'plasma_lang_Ne_Te_500ms'
 
     id = Column(Integer(11, unsingned=True), primary_key=True)
+    source_id = Column(Integer(11, unsigned=True), ForeignKey('source_files.id'))
+
+    source = relationship('SourceFile', backref=backref('data', order_by=id))
 
     year = Column(Integer(3, unsigned=True))
     day_of_year = Column(Integer(3, unsigned=True))

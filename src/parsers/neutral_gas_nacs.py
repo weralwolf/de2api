@@ -1,5 +1,6 @@
 __author__ = 'weralwolf'
 from models.source_data import NeutralGasNACSnT1s, SourceFile
+from common.logger import log
 
 
 class NT1s:
@@ -47,6 +48,7 @@ class NT1s:
         year = source.filename[0:4]
         day_of_year = source.filename[4:7]
 
+        log.debug('<%i> %s' % (len(data), source.filename))
         for data_row in data:
             source.nt1s_data.append(NT1s.parse_line(data_row, year, day_of_year))
 

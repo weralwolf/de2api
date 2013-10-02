@@ -30,7 +30,3 @@ class DBConnection:
         return Session()
 
 db = DBConnection(db_conf["user"], db_conf["password"], db_conf["database"], db_conf["host"], db_conf["driver"])
-
-if __name__ == '__main__':
-    from models.source_data import *
-    Base.metadata.create_all(db.__engine__)

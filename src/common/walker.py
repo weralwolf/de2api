@@ -1,6 +1,7 @@
 __author__ = 'weralwolf'
 import os
 import re
+from logger import log
 
 
 def check_dir(directory_list, file_type, root):
@@ -21,7 +22,7 @@ def walk(path, file_type, recursive, parser):
         files = os.listdir('.')
         queue.extend(check_dir(files, file_type, path))
 
-    print "%i files collected for parsing..." % (len(queue))
+    log.info('%i files collected for parsing...' % (len(queue)))
 
     parsed_data = []
 

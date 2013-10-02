@@ -1,5 +1,6 @@
 __author__ = 'weralwolf'
 from models.source_data import PlasmaLangNeTe500Ms, SourceFile
+from common.logger import log
 
 
 class NeTe500Ms:
@@ -38,10 +39,8 @@ class NeTe500Ms:
         data.pop(0)
         data.pop(0)
 
-        #data_rows = []
-
+        log.debug('<%i> %s' % (len(data), source.filename))
         for data_row in data:
-            #data_rows.append(NeTe500Ms.parse_line(data_row))
             source.nete500ms_data.append(NeTe500Ms.parse_line(data_row))
 
         return [source]

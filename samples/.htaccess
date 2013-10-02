@@ -1,0 +1,8 @@
+AuthUserFile ./.htpasswd
+AuthType Basic
+AuthName "Lab28 data"
+Require valid-user
+
+<Files "*.*">
+  Require valid-user
+</Files>

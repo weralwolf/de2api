@@ -1,8 +1,8 @@
 __author__ = 'weralwolf'
-from sqlalchemy import Column, Integer, Float, String, ForeignKey
+from sqlalchemy import Column, Integer, Float, String, ForeignKey, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref
-from conf import PROJECT_DIR, data_path
+from conf import data_path
 
 from os.path import abspath
 
@@ -15,6 +15,7 @@ class SourceFile(Base):
     id = Column(Integer(11, unsigned=True), primary_key=True)
     filename = Column(String(256))
     filepath = Column(String(256))
+    success = Column(Boolean, default=True)
 
     def __init__(self, path):
         filename = abspath(path)
@@ -25,6 +26,10 @@ class SourceFile(Base):
 
         self.filename = filename
         self.filepath = filepath
+
+    def clear_data(self):
+        self.nete500ms_data = []
+        self.nt1s_data = []
 
 
 class PlasmaLangNeTe500Ms(Base):

@@ -42,6 +42,6 @@ class NeTe500Ms:
 
         for data_row in data:
             #data_rows.append(NeTe500Ms.parse_line(data_row))
-            source.data.append(NeTe500Ms.parse_line(data_row))
+            source.nete500ms_data.append(NeTe500Ms.parse_line(data_row))
 
         return [source]

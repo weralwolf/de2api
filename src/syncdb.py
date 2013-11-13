@@ -1,3 +1,4 @@
+#!/usr/bin/python2.7
 __author__ = 'weralwolf'
 from common.db import *
 from models.source_data import *

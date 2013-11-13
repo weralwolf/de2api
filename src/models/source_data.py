@@ -58,7 +58,7 @@ class PlasmaLangNeTe500Ms(Base):
     sza = Column(Float, default=None)
 
     def __repr__(self):
-        return "<lang_500ms: y: %i, d: %i, ut: %i>" % (self.year, self.day_of_year, self.ut)
+        return "<%s: y: %i, d: %i, ut: %i>" % (self.__tablename__, self.year, self.day_of_year, self.ut)
 
 
 class NeutralGasNACSnT1s(Base):
@@ -92,4 +92,44 @@ class NeutralGasNACSnT1s(Base):
     sza = Column(Float, default=None)
 
     def __repr__(self):
-        return "<nasc_n_t_1s: y: %i, d: %i, ut: %i>" % (self.year, self.day_of_year, self.ut)
+      return "<%s: y: %i, d: %i, ut: %i>" % (self.__tablename__, self.year, self.day_of_year, self.ut)
+
+
+class NeutralGasWATSnTv2s(Base):
+    __tablename__ = 'neutral_gas_wats_n_t_v_2s'
+
+    id = Column(Integer(11, unsigned=True), primary_key=True)
+    source_id = Column(Integer(11, unsigned=True), ForeignKey('source_files.id'))
+    source = relationship('SourceFile', backref=backref('ntv2s_data', order_by=id))
+
+    year = Column(Integer(3, unsigned=True))
+    day_of_year = Column(Integer(3, unsigned=True))
+    ut = Column(Integer(11, unsigned=True))
+    orbit = Column(Integer(10, unsigned=True))
+    mode = Column(Integer(1, unsigned=True))
+    mode_horizontal = Column(Boolean())
+    slot = Column(Integer(3, unsigned=True))
+    outin = Column(Integer(3, unsigned=True))
+    mass = Column(Integer(5, unsigned=True))
+    density = Column(Float, default=None)
+    tn = Column(Float, default=None)
+    tn_correction = Column(Float, default=None)
+    v_s = Column(Float, default=None)
+    c1 = Column(Integer(10, unsigned=True))
+    c2 = Column(Integer(10, unsigned=True))
+    t1 = Column(Integer(10, unsigned=True))
+    t2 = Column(Integer(10, unsigned=True))
+    v_geo = Column(Float, default=None)
+    v_geo_correction = Column(Float, default=None)
+    orbit = Column(Integer(10, unsigned=True))
+    altitude = Column(Float, default=None)
+    latitude = Column(Float, default=None)
+    longitude = Column(Float, default=None)
+    lst = Column(Float, default=None)
+    lmt = Column(Float, default=None)
+    l = Column(Float, default=None)
+    inv_lat = Column(Float, default=None)
+    sza = Column(Float, default=None)
+
+    def __repr__(self):
+      return "<%s: y: %i, d: %i, ut: %i>" % (self.__tablename__, self.year, self.day_of_year, self.ut)

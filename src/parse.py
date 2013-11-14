@@ -11,6 +11,7 @@ from parsers.plasma_lang import NeTe500Ms
 from parsers.neutral_gas_nacs import NT1s
 from parsers.neutral_gas_wats import NTV2s
 
+
 def parse_all():
     data = []
     log.info('Parsing `plasma lang`')

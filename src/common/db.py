@@ -4,6 +4,7 @@ __author__ = 'weralwolf'
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from conf import db_conf
+from common.logger import log
 
 
 class DBConnection:
@@ -20,8 +21,10 @@ class DBConnection:
     @staticmethod
     def execute(query):
         try:
+            log.info("Execute query: %s" % (str(query)))
             return DBConnection.connection().execute(query)
-        except:
+        except Exception, exc:
+            log.error("db.execute: %(error)s" % {'error': exc.message})
             return None
 
     @staticmethod

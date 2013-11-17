@@ -2,6 +2,7 @@ __author__ = 'weralwolf'
 import os
 import re
 from logger import log
+from db import db
 
 
 def check_dir(directory_list, file_type, root):
@@ -10,6 +11,29 @@ def check_dir(directory_list, file_type, root):
         if re.match('.*\.%s$' % file_type, i, flags=re.IGNORECASE):
             queue.append("%s/%s" % (root, i))
     return queue
+
+
+def write_data_chunk(data):
+    log.debug("Writing %i models..." % len(data))
+    session = db.session()
+    for row in data:
+        try:
+            log.debug('Adding `%s`' % row.filename)
+            session.add(row)
+
+        except:
+            log.error('Error adding file `%s`', row.filename)
+            row.success = False
+            row.clear_data()
+
+            #session = db.session()
+            session.add(row)
+            #session.commit()
+            #session.close()
+    log.debug("Commit short session...")
+    session.commit()
+    session.close()
+    log.debug("Session commited.")
 
 
 def walk(path, file_type, recursive, parser):
@@ -22,11 +46,22 @@ def walk(path, file_type, recursive, parser):
         files = os.listdir('.')
         queue.extend(check_dir(files, file_type, path))
 
-    log.info('%i files collected for parsing...' % (len(queue)))
+    queue_len = len(queue)
+    log.info('%i files collected for parsing...' % queue_len)
 
     parsed_data = []
 
+    data_index = 0
     for i in queue:
-        parsed_data.extend(parser.parse(i))
+        if len(parsed_data) > 5:
+            log.debug("%i/%i files done" % (data_index, queue_len))
+            write_data_chunk(parsed_data)
+            del parsed_data
+            parsed_data = []
 
-    return parsed_data
+        parsed_data.extend(parser.parse(i))
+        data_index += 1
+
+    if len(parsed_data):
+        write_data_chunk(parsed_data)
+

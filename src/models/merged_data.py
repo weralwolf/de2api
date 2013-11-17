@@ -1,6 +1,6 @@
 __author__ = 'weralwolf'
 
-from sqlalchemy import Column, Integer, Float, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, Float, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 Base = declarative_base()
 

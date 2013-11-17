@@ -1,6 +1,6 @@
 __author__ = 'weralwolf'
 
-from sqlalchemy import Column, Integer, Float, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, Float, Boolean, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -10,12 +10,15 @@ class BasicReorderNACS(Base):
     __tablename__ = 'basic_reorder_nacs'
 
     id = Column(Integer(11, unsigned=True), primary_key=True)
-    original_id = Column(Integer(11, unsigned=True))#, ForeignKey('neutral_gas_nacs_n_t_1s.id'))
+    original_id = Column(Integer(11, unsigned=True))
     source_id = Column(Integer(11, unsigned=True))
 
-    year = Column(Integer(3, unsigned=True))
-    day_of_year = Column(Integer(3, unsigned=True))
-    ut = Column(Integer(11, unsigned=True))
+    date_general = Column(DateTime())
+    date_ms = Column(Integer(11, unsigned=True))
+    date_original_year = Column(Integer(3, unsigned=True))
+    date_original_day_of_year = Column(Integer(3, unsigned=True))
+    date_original_ut = Column(Integer(11, unsigned=True))
+
     orbit = Column(Integer(10, unsigned=True))
     o_density = Column(Float, default=None)
     o_density_err = Column(Float, default=None)
@@ -44,12 +47,15 @@ class BasicReorderWATS(Base):
     __tablename__ = 'basic_reorder_wats'
 
     id = Column(Integer(11, unsigned=True), primary_key=True)
-    original_id = Column(Integer(11, unsigned=True))#, ForeignKey('neutral_gas_wats_n_t_v_2s.id'))
+    original_id = Column(Integer(11, unsigned=True))
     source_id = Column(Integer(11, unsigned=True))
 
-    year = Column(Integer(3, unsigned=True))
-    day_of_year = Column(Integer(3, unsigned=True))
-    ut = Column(Integer(11, unsigned=True))
+    date_general = Column(DateTime())
+    date_ms = Column(Integer(11, unsigned=True))
+    date_original_year = Column(Integer(3, unsigned=True))
+    date_original_day_of_year = Column(Integer(3, unsigned=True))
+    date_original_ut = Column(Integer(11, unsigned=True))
+
     orbit = Column(Integer(10, unsigned=True))
     mode = Column(Integer(1, unsigned=True))
     mode_horizontal = Column(Boolean())

@@ -93,8 +93,9 @@ def reorder():
                          '"-01-01")) + `day_of_year` - 1), " 00:00:00"), INTERVAL ut/1000 SECOND_MICROSECOND) ASC;'
 
         nacs_select = ["st.id", "source_id",
-                       SQLCommand("CONCAT(FROM_DAYS(TO_DAYS(CONCAT(`year`, '-01-01')) + `day_of_year` - 1), ' '" +
-                                  ",  SEC_TO_TIME(`ut`/ 1000))"), SQLCommand("`ut` %% 1000"),
+                       SQLCommand("DATE_ADD(CONCAT(FROM_DAYS(TO_DAYS(CONCAT(`year`, '-01-01')) +' + "
+                                  "' `day_of_year` - 1), ' 00:00:00'), INTERVAL ut/1000 SECOND_MICROSECOND)"),
+                       SQLCommand("`ut` %% 1000"),
                        "year", "day_of_year", "ut", "orbit", "o_density", "o_density_err",
                        "n2_density", "n2_density_err", "he_density", "he_density_err", "n_density",
                        "n_density_err", "ar_density", "ar_density_err", "alt", "lat", "long", "lst",
@@ -107,8 +108,9 @@ def reorder():
                        "lmt", "l_sh", "inv_lat", "sza"]
 
         wats_select = ["st.id", "source_id",
-                       SQLCommand("CONCAT(FROM_DAYS(TO_DAYS(CONCAT(`year`, '-01-01')) + `day_of_year` - 1), ' '" +
-                                  ",  SEC_TO_TIME(`ut`/ 1000))"), SQLCommand("`ut` %% 1000"),
+                       SQLCommand("DATE_ADD(CONCAT(FROM_DAYS(TO_DAYS(CONCAT(`year`, '-01-01')) +' + "
+                                  "' `day_of_year` - 1), ' 00:00:00'), INTERVAL ut/1000 SECOND_MICROSECOND)"),
+                       SQLCommand("`ut` %% 1000"),
                        "year", "day_of_year", "ut", "mode", "mode_horizontal", "slot",
                        "outin", "mass", "density", "tn", "tn_correction", "v_s", "c1", "c2", "t1", "t2",
                        "v_geo", "v_geo_correction", "orbit", "altitude", "latitude", "longitude", "lst",

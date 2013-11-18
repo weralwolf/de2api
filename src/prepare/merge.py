@@ -89,8 +89,8 @@ def reorder():
         """
         ordering_query = 'INSERT INTO `%(destination_table)s` (%(fields_insert)s) SELECT %(fields_select)s FROM ' + \
                          '`%(source_table)s` as `st` JOIN `source_files` as `sf` ON `st`.`source_id`=`sf`.`id` ' + \
-                         'WHERE `sf`.`ignored`=0 ORDER BY ADDTIME(CONCAT(FROM_DAYS(TO_DAYS(CONCAT(`year`, "-01-01")) + ' + \
-                         '`day_of_year` - 1), " 00:00:00"), SEC_TO_TIME(`ut`/1000)) ASC;'
+                         'WHERE `sf`.`ignored`=0 ORDER BY DATE_ADD(CONCAT(FROM_DAYS(TO_DAYS(CONCAT(`year`, ' + \
+                         '"-01-01")) + `day_of_year` - 1), " 00:00:00"), INTERVAL ut/1000 SECOND_MICROSECOND) ASC;'
 
         nacs_select = ["st.id", "source_id",
                        SQLCommand("CONCAT(FROM_DAYS(TO_DAYS(CONCAT(`year`, '-01-01')) + `day_of_year` - 1), ' '" +

@@ -1,5 +1,5 @@
 __author__ = 'weralwolf'
-from models.source_data import NeutralGasNACSnT1s, SourceFile
+from models.models import NeutralGasNACSnT1s, SourceFile
 from common.logger import log
 
 

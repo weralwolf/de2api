@@ -1,10 +1,9 @@
 __author__ = 'weralwolf'
 
-from models.temporary_models import BasicReorderWATS, BasicReorderNACS
-from models.source_data import NeutralGasWATSnTv2s, NeutralGasNACSnT1s
-from models.diffs import ShortDiffNACS, ShortDiffWATS
+from models.models import *
 from common.logger import log
 from common.db import db
+
 
 def reorder():
     """
@@ -144,11 +143,40 @@ def reorder():
     filter_before()
     make_order()
 
+from models.convert import convert
+
 
 def merge():
     """
     Merge data NACS and WATS together
     Question is about fitting NACS(with 1s resolution) to WATS(with 2s resolution) data
     """
+    def make_conversion(data_type, chunk_size):
+        s = db.session()
+        count = s.query(data_type).count()
+        log.info("%i elements to be converted" % count)
+        iterations = count / chunk_size
+        if count % chunk_size:
+            iterations += 1
+        for i in range(0, iterations):
+            for row in s.query(data_type).slice(i * chunk_size, (i + 1) * chunk_size - 1).all():
+                s.add(convert(row))
+                s.commit()
+        s.close()
+
+    chunk_size = 100
+    #make_conversion(BasicReorderNACS, chunk_size)
+    make_conversion(BasicReorderWATS, chunk_size)
 
     log.info("Merging data")
+
+
+def resampling():
+    """
+    NACS data resampling from 1s to 2s due to wats data.
+    Might be it's more logical would be to find out wats
+    """
+    s = db.session()
+    ids = s.query(MeasurementPoint.id).join(Measurement).filter_by(Measurement.type=='wats').all()
+    query = "INSERT INTO `measurements` (`measurement_point_id`)"
+    db.execute(query)

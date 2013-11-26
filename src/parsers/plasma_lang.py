@@ -1,5 +1,5 @@
 __author__ = 'weralwolf'
-from models.source_data import PlasmaLangNeTe500Ms, SourceFile
+from models.models import PlasmaLangNeTe500Ms, SourceFile
 from common.logger import log
 
 

@@ -161,11 +161,11 @@ def merge():
         for i in range(0, iterations):
             for row in s.query(data_type).slice(i * chunk_size, (i + 1) * chunk_size - 1).all():
                 s.add(convert(row))
-                s.commit()
+            s.commit()
         s.close()
 
     chunk_size = 100
-    #make_conversion(BasicReorderNACS, chunk_size)
+    make_conversion(BasicReorderNACS, chunk_size)
     make_conversion(BasicReorderWATS, chunk_size)
 
     log.info("Merging data")
@@ -176,7 +176,60 @@ def resampling():
     NACS data resampling from 1s to 2s due to wats data.
     Might be it's more logical would be to find out wats
     """
+    def get_new(mp1, mp2=None):
+        def find_model(mp, type, level=1, device='nacs'):
+            for i in mp.data:
+                if i.type==type and i.type==level and i.device==device:
+                    return i
+            return None
+
+        update = []
+
+        if not mp2 or (mp1.datetime.python_type() - mp2.datetime.python_type()).seconds > 3:
+            if not mp2:
+                log.debug("[wats:%i:%s] edge point does not exists" % (mp1.id, str(mp1.datetime)))
+            else:
+                log.debug("[wats:%i:%s]&[wats:%i:%s] is to fas in time dimension" %
+                          (mp1.id, str(mp1.datetime), mp2.id, str(mp2.datetime)))
+            for measurement in mp1.data:
+                if measurement.device == 'nacs':
+                    nm = Measurement(measurement)
+                    nm.level = 2
+                    update.append(nm)
+        else:
+            log.debug("[wats:%i:%s]&[wats:%i:%s] is goes to be resampled" %
+                      (mp1.id, str(mp1.datetime), mp2.id, str(mp2.datetime)))
+            for measurement in mp1.data:
+                ms = find_model(mp2, mp1.type)
+                nm = Measurement(measurement)
+                nm.level = 2
+                nm.value = (nm.value + ms.value) / 2
+                nm.error = (nm.error + ms.error) / 2
+                nm.correction = (nm.correction + ms.correction) / 2
+                update.append(nm)
+        mp1.data.extend(update)
+        return mp1
+
+
     s = db.session()
-    ids = s.query(MeasurementPoint.id).join(Measurement).filter_by(Measurement.type=='wats').all()
-    query = "INSERT INTO `measurements` (`measurement_point_id`)"
-    db.execute(query)
+    ids_ = s.query(Measurement.measurement_point_id).filter(Measurement.device=='wats').all()
+    ids = []
+    for i in ids_:
+        if i[0] not in ids:
+            ids.append(i[0])
+    chunk_size = 100
+    iterations = [ids[i*chunk_size:(i+1)*chunk_size] for i in range(0, len(ids)/chunk_size)]
+    log.info("WATS data in %i elements going to be processed in %i iterations" % (len(ids), len(iterations)))
+    for points in iterations:
+        log.info("Processing ids in range %s" % str(points))
+        extended_points = points
+        extended_points.extend([j-1 for j in points])
+        data = s.query(MeasurementPoint).join(Measurement).\
+            filter(Measurement.type=='nacs').filter(MeasurementPoint.id.in_(extended_points)).\
+            order_by(Measurement.measurement_point_id).order_by(Measurement.type).all()
+        data = {row.id: row for row in data}
+        for key, row in data:
+            if key in points:
+                s.add(get_new(row, data.get(key-1, None)))
+        s.commit()
+

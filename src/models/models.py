@@ -1,5 +1,5 @@
 __author__ = 'weralwolf'
-from sqlalchemy import Column, Integer, Float, String, ForeignKey, Boolean, DateTime
+from sqlalchemy import Table, Column, Integer, Float, String, ForeignKey, Boolean, DateTime
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.declarative import declarative_base
 from conf import data_path
@@ -287,13 +287,30 @@ class Measurement(Base):
     error = Column(Float, default=None)
     correction = Column(Float, default=None)
 
-    def __init__(self, **kwargs):
-        self.device = kwargs['device']
-        self.type = kwargs['type']
-        self.value = kwargs['value']
-        self.error = kwargs.get('error', 0.)
-        self.correction = kwargs.get('correction', 0.)
-        self.level = kwargs.get('level', 1)
+    def __init__(self, *args, **kwargs):
+        def from_kwargs(me, **kwargs):
+            me.device = kwargs['device']
+            me.type = kwargs['type']
+            me.value = kwargs['value']
+            me.error = kwargs.get('error', 0.)
+            me.correction = kwargs.get('correction', 0.)
+            me.level = kwargs.get('level', 1)
+
+        def from_object(me, obj):
+            me.device = obj.device
+            me.type = obj.type
+            me.value = obj.value
+            me.error = obj.error
+            me.correction = obj.correction
+            me.level = obj.level
+
+        if len(args):
+            if isinstance(args[0], Measurement):
+                from_object(self, args[0])
+            else:
+                raise ValueError
+        else:
+            from_kwargs(self, **kwargs)
 
     def __repr__(self):
         return "<%s: type:`%s`, value:%10.2f>" % (self.__tablename__, self.type, self.value)

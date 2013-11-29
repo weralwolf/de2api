@@ -171,16 +171,36 @@ def merge():
     log.info("Merging data")
 
 
-def resampling():
+def resample():
+    """NACS data resampling from 1s to 2s due to wats data. Might be it's more logical would be to find
+    out wats.
     """
-    NACS data resampling from 1s to 2s due to wats data.
-    Might be it's more logical would be to find out wats
-    """
-    def get_new(mp1, mp2=None):
-        def find_model(mp, type, level=1, device='nacs'):
-            for i in mp.data:
-                if i.type==type and i.type==level and i.device==device:
-                    return i
+    def merge_pair(mp1, mp2=None):
+        """Merge pair of MeasurementPoints. Check if point have neighbour with time difference 2 seconds.
+        If don't we will take values of original point, otherwise we will take middle value of this point
+        and neighbour
+
+        Keyword arguments:
+        mp1 -- 'nacs' measurement point conjuncted with 'wats'
+        mp2 -- neighbour measurement point. Default 'None' - means neighbour doesn't exists
+
+        Return: mp1
+        """
+        def find_value_model(mp, type, level=1, device='nacs'):
+            """Find measurement from mp2 conjuncted with measurement from mp1
+
+            Keyword arguments:
+            mp -- measurement point (mp2)
+            type -- type of measurement from mp1
+            level -- level of measurement from mp1
+            device -- device of measurement from mp1
+
+            Return:
+            Measurement object conjuncted with selected value
+            """
+            for value_model in mp.data:
+                if value_model.type == type and value_model.level == level and value_model.device == device:
+                    return value_model
             return None
 
         update = []
@@ -200,7 +220,7 @@ def resampling():
             log.debug("[wats:%i:%s]&[wats:%i:%s] is goes to be resampled" %
                       (mp1.id, str(mp1.datetime), mp2.id, str(mp2.datetime)))
             for measurement in mp1.data:
-                ms = find_model(mp2, mp1.type)
+                ms = find_value_model(mp2, mp1.type)
                 nm = Measurement(measurement)
                 nm.level = 2
                 nm.value = (nm.value + ms.value) / 2
@@ -210,9 +230,8 @@ def resampling():
         mp1.data.extend(update)
         return mp1
 
-
-    s = db.session()
-    ids_ = s.query(Measurement.measurement_point_id).filter(Measurement.device=='wats').all()
+    session_instance = db.session()
+    ids_ = session_instance.query(Measurement.measurement_point_id).filter(Measurement.device=='wats').all()
     ids = []
     for i in ids_:
         if i[0] not in ids:
@@ -224,12 +243,16 @@ def resampling():
         log.info("Processing ids in range %s" % str(points))
         extended_points = points
         extended_points.extend([j-1 for j in points])
-        data = s.query(MeasurementPoint).join(Measurement).\
+        data = session_instance.query(MeasurementPoint).join(Measurement).\
             filter(Measurement.type=='nacs').filter(MeasurementPoint.id.in_(extended_points)).\
             order_by(Measurement.measurement_point_id).order_by(Measurement.type).all()
         data = {row.id: row for row in data}
         for key, row in data:
             if key in points:
-                s.add(get_new(row, data.get(key-1, None)))
-        s.commit()
+                session_instance.add(merge_pair(row, data.get(key-1, None)))
+        session_instance.commit()
 
+    # Generating 2 level for 'wats' measurements
+    db.execute("INSERT INTO `measurements` (`measurement_point_id`, `device`,`type`, `level`, `value`, `error`, " +
+               "`correction`) SELECT `measurement_point_id`, `device`,`type`, `level`, 2, `error`, `correction` " +
+               "FROM `measurements` WHERE `device`='wats';")

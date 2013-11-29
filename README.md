@@ -12,11 +12,14 @@ Database models
 
 Parsing satellite data
 ----------------------
-
+Data parsing mechanism is represented in a way of separate parsers for each data type.
 
 Merging data
 ------------
 
+
+Data resampling
+---------------
 
 Tool-chain
 ----------

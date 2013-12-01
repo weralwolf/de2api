@@ -4,6 +4,6 @@ __author__ = 'weralwolf'
 from prepare.merge import reorder, merge, resample
 
 if __name__ == '__main__':
-    #reorder()
+    reorder()
     merge()
-    #resample()
+    resample()

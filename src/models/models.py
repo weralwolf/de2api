@@ -335,9 +335,9 @@ def __get_value_types():
 class TimeDiff(Base):
     __tablename__ = 'diff_time'
     id = Column(Integer(11, unsigned=True), primary_key=True)
-    id_1 = Column('id_1', Integer(11, unsigned=True), ForeignKey('measurement_points.id'))
-    id_2 = Column('id_2', Integer(11, unsigned=True), ForeignKey('measurement_points.id'))
-    diff = Column('diff', Float)
+    id_1 = Column(Integer(11, unsigned=True), ForeignKey('measurement_points.id'))
+    id_2 = Column(Integer(11, unsigned=True), ForeignKey('measurement_points.id'))
+    diff = Column(Float)
     diff_type = 'time'
 
     def __init__(self):
@@ -364,16 +364,18 @@ def declare_value_diff_tables():
 
             return type(class_name, (Base, ), {
                 '__tablename__': table_name,
-                'id': Column('id', Integer(11, unsigned=True), primary_key=True),
-                'id_1': Column('id_1', Integer(11, unsigned=True), ForeignKey('measurements.id')),
-                'id_2': Column('id_2', Integer(11, unsigned=True), ForeignKey('measurements.id')),
-                'diff': Column('diff', Float),
+                'id': Column(Integer(11, unsigned=True), primary_key=True),
+                'id_1': Column(Integer(11, unsigned=True), ForeignKey('measurements.id')),
+                'id_2': Column(Integer(11, unsigned=True), ForeignKey('measurements.id')),
+                'diff': Column(Float),
                 'diff_type': diff_type
             })
 
     return {value_type['id']: {
         'table': DiffTable('diff_%s' % value_type['name'], value_type['id'])
     } for value_type in cache.get('value_types', __get_value_types)}
+
+value_diff = declare_value_diff_tables()
 
 
 class SegmentationConfiguration(Base):
@@ -393,7 +395,7 @@ class SegmentationParameter(Base):
     __tablename__ = 'segments_segmentation_parameters'
 
     id = Column(Integer(11, unsigned=True), primary_key=True)
-    configuration_id = Column(Integer(11, unsigned=True))
+    configuration_id = Column(Integer(11, unsigned=True), ForeignKey('segments_segmentation_configurations.id'))
     configuration = relationship('SegmentationConfiguration', backref=backref('parameters', order_by=id))
 
     name = Column(String(60))
@@ -413,7 +415,7 @@ class TimeSegment(Base):
 
     id = Column(Integer(11, unsigned=True), primary_key=True)
     configuration_id = Column(Integer(11, unsigned=True), ForeignKey('segments_segmentation_configurations.id'))
-    configuration = relationship('SegmentationConfiguration', backref=backref('segments', order_by=id))
+    configuration = relationship('SegmentationConfiguration', backref=backref('segments_time', order_by=id))
 
     start = Column(Integer(11, unsigned=True))
     end = Column(Integer(11, unsigned=True))
@@ -443,13 +445,12 @@ def declare_value_segments_table():
 
             return type(class_name, (Base, ), {
                 '__tablename__': table_name,
-                'id': Column('id', Integer(11, unsigned=True), primary_key=True),
+                'id': Column(Integer(11, unsigned=True), primary_key=True),
                 'configuration_id': Column('configuration_id', Integer(11, unsigned=True),
                                            ForeignKey('segments_segmentation_configurations.id')),
-                'configuration': relationship('configuration', 'SegmentationConfiguration',
-                                              backref=backref(table_name, order_by=id)),
-                'start': Column('start', Integer(11, unsigned=True)),
-                'end': Column('end', Integer(11, unsigned=True)),
+                'configuration': relationship('SegmentationConfiguration', backref=table_name),
+                'start': Column(Integer(11, unsigned=True)),
+                'end': Column(Integer(11, unsigned=True)),
                 'segment_type': value_id
             })
 
@@ -463,5 +464,4 @@ def declare_value_segments_table():
         'relation': relation_table('segments_relation_%s' % value_type['name'], 'segments_%s.id' % value_type['name']),
     } for value_type in cache.get('value_types', __get_value_types)}
 
-value_diff = declare_value_diff_tables()
 value_segments = declare_value_segments_table()

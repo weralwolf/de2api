@@ -12,6 +12,7 @@ db_conf = {
 
 PROJECT_DIR = abspath(dirname(__file__))
 data_path = abspath(PROJECT_DIR + '/../samples/')
+cache_path = abspath(PROJECT_DIR + '/../cache/')
 
 logger = {
     'file': {

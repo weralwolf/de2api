@@ -1,9 +1,11 @@
 __author__ = 'weralwolf'
 from sqlalchemy import Table, Column, Integer, Float, String, ForeignKey, Boolean, DateTime
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship, backref, mapper
 from sqlalchemy.ext.declarative import declarative_base
 from conf import data_path
 from os.path import abspath
+from common import cache
+from common.db import db
 
 Base = declarative_base()
 
@@ -243,6 +245,7 @@ class ShortDiffWATS(Base):
 
     time_diff = Column(Integer(11))
 
+
 class MeasurementPoint(Base):
     """
     @QUESTION: what if alt, lat, etc. is different for nacs and wats?
@@ -314,3 +317,151 @@ class Measurement(Base):
 
     def __repr__(self):
         return "<%s: type:`%s`, value:%10.2f>" % (self.__tablename__, self.type, self.value)
+
+
+def __get_value_types():
+    """
+    Calculate types of measurements presented in database and preparing this information to be cached.
+    """
+    def translate(arg):
+        return arg.replace('.', '_').replace(':', '__')
+
+    s = db.session()
+    query_data = s.query(Measurement.device, Measurement.type).group_by(Measurement.device).\
+        group_by(Measurement.type).all()
+    return [{'original': (i[0], i[1]), 'id': '%s:%s' % i, 'name': translate('%s:%s' % i)} for i in query_data]
+
+
+class TimeDiff(Base):
+    __tablename__ = 'diff_time'
+    id = Column(Integer(11, unsigned=True), primary_key=True)
+    id_1 = Column('id_1', Integer(11, unsigned=True), ForeignKey('measurement_points.id'))
+    id_2 = Column('id_2', Integer(11, unsigned=True), ForeignKey('measurement_points.id'))
+    diff = Column('diff', Float)
+    diff_type = 'time'
+
+    def __init__(self):
+        pass
+
+
+def declare_value_diff_tables():
+    """
+    Diff tables are main point of segments creation.
+
+    Since segments are separated on families by configurations we couldn't calculate all of them in advance. To solve
+    this problem we need to have calculated the most unified form of segments to make fast build any of the families
+    on a fly.
+
+    To make this process fasted we need to separate diffs measurement types by different tables to simplify lots of
+    queries and cut time of query execution since we will have multiple joining.
+
+    @todo: might be we need to create temporary tables before querying? Because even if we distinguish data by different
+    tables while joining we would have multiplication of millions of data lines.
+    """
+    class DiffTable(type):
+        def __new__(mcs, table_name, diff_type):
+            class_name = str(''.join([i.capitalize() for i in table_name.split('_')]))
+
+            return type(class_name, (Base, ), {
+                '__tablename__': table_name,
+                'id': Column('id', Integer(11, unsigned=True), primary_key=True),
+                'id_1': Column('id_1', Integer(11, unsigned=True), ForeignKey('measurements.id')),
+                'id_2': Column('id_2', Integer(11, unsigned=True), ForeignKey('measurements.id')),
+                'diff': Column('diff', Float),
+                'diff_type': diff_type
+            })
+
+    return {value_type['id']: {
+        'table': DiffTable('diff_%s' % value_type['name'], value_type['id'])
+    } for value_type in cache.get('value_types', __get_value_types)}
+
+
+class SegmentationConfiguration(Base):
+    """
+    ``SegmentationConfiguration`` - is a segments family configuration. It represents single configuration for slicing.
+    This configurations helps to work with processed sets of segments.
+    """
+    __tablename__ = 'segments_segmentation_configurations'
+    id = Column(Integer(11, unsigned=True), primary_key=True)
+    name = Column(String(255))
+
+
+class SegmentationParameter(Base):
+    """
+    ``SegmentationParameter`` - is a parameters used by slicing algorithms.
+    """
+    __tablename__ = 'segments_segmentation_parameters'
+
+    id = Column(Integer(11, unsigned=True), primary_key=True)
+    configuration_id = Column(Integer(11, unsigned=True))
+    configuration = relationship('SegmentationConfiguration', backref=backref('parameters', order_by=id))
+
+    name = Column(String(60))
+    value = Column(Float)
+
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+
+    def __repr__(self):
+        return '<%s[%i: segment %i]: %s = %10.2f>' % (self.__tablename__, self.id, self.data_segment_id,
+                                                      self.name, self.value)
+
+
+class TimeSegment(Base):
+    __tablename__ = "segments_time"
+
+    id = Column(Integer(11, unsigned=True), primary_key=True)
+    configuration_id = Column(Integer(11, unsigned=True), ForeignKey('segments_segmentation_configurations.id'))
+    configuration = relationship('SegmentationConfiguration', backref=backref('segments', order_by=id))
+
+    start = Column(Integer(11, unsigned=True))
+    end = Column(Integer(11, unsigned=True))
+
+    @property
+    def segment_type(self):
+        return 'time'
+
+    def __init__(self, **kwargs):
+        self.start = kwargs.get('start')
+        self.end = kwargs.get('end')
+        self.type = kwargs.get('type')
+
+    def __repr__(self):
+        return "<%s[%s]: (%i, %i)>" % (self.__tablename__, self.type, self.start, self.end)
+
+
+segments_relation_time = Table('segments_relation_time', Base.metadata,
+                               Column('segment_id', Integer, ForeignKey('segments_time.id')),
+                               Column('point_id', Integer, ForeignKey('measurement_points.id')))
+
+
+def declare_value_segments_table():
+    class ValueTable(type):
+        def __new__(mcs, table_name, value_id):
+            class_name = str(''.join([i.capitalize() for i in table_name.split('_')]))
+
+            return type(class_name, (Base, ), {
+                '__tablename__': table_name,
+                'id': Column('id', Integer(11, unsigned=True), primary_key=True),
+                'configuration_id': Column('configuration_id', Integer(11, unsigned=True),
+                                           ForeignKey('segments_segmentation_configurations.id')),
+                'configuration': relationship('configuration', 'SegmentationConfiguration',
+                                              backref=backref(table_name, order_by=id)),
+                'start': Column('start', Integer(11, unsigned=True)),
+                'end': Column('end', Integer(11, unsigned=True)),
+                'segment_type': value_id
+            })
+
+    def relation_table(table_name, segments_table_name):
+        return Table(table_name, Base.metadata,
+                     Column('segment_id', Integer, ForeignKey(segments_table_name)),
+                     Column('point_id', Integer, ForeignKey('measurements.id')))
+
+    return {value_type['id']: {
+        'table': ValueTable('segments_%s' % value_type['name'], value_type['id']),
+        'relation': relation_table('segments_relation_%s' % value_type['name'], 'segments_%s.id' % value_type['name']),
+    } for value_type in cache.get('value_types', __get_value_types)}
+
+value_diff = declare_value_diff_tables()
+value_segments = declare_value_segments_table()

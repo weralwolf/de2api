@@ -3,6 +3,7 @@ __author__ = 'weralwolf'
 from models.models import *
 from common.logger import log
 from common.db import db
+from common import cache
 
 
 def reorder():
@@ -151,22 +152,23 @@ def merge():
     Merge data NACS and WATS together
     Question is about fitting NACS(with 1s resolution) to WATS(with 2s resolution) data
     """
-    def make_conversion(data_type, chunk_size):
-        s = db.session()
+    s = db.session()
+    def make_conversion(data_type, chunk_size, do_search=True):
         count = s.query(data_type).count()
         log.info("%i elements to be converted" % count)
         iterations = count / chunk_size
         if count % chunk_size:
             iterations += 1
         for i in range(0, iterations):
-            for row in s.query(data_type).slice(i * chunk_size, (i + 1) * chunk_size - 1).all():
-                s.add(convert(row))
+            data = convert(s.query(data_type).slice(i * chunk_size, (i + 1) * chunk_size - 1).all(), do_search)
+            for i in data:
+                s.add(i)
             s.commit()
-        s.close()
 
-    chunk_size = 100
-    make_conversion(BasicReorderNACS, chunk_size)
+    chunk_size = 1000
+    make_conversion(BasicReorderNACS, chunk_size, False)
     make_conversion(BasicReorderWATS, chunk_size)
+    s.close()
 
     log.info("Merging data")
 
@@ -227,8 +229,9 @@ def resample():
                 nm.error = (nm.error + ms.error) / 2
                 nm.correction = (nm.correction + ms.correction) / 2
                 update.append(nm)
-        mp1.data.extend(update)
-        return mp1
+
+        session_instance.add(mp1.data.extend(update))
+        session_instance.commit()
 
     session_instance = db.session()
     ids_ = session_instance.query(Measurement.measurement_point_id).filter(Measurement.device=='wats').all()
@@ -240,19 +243,47 @@ def resample():
     iterations = [ids[i*chunk_size:(i+1)*chunk_size] for i in range(0, len(ids)/chunk_size)]
     log.info("WATS data in %i elements going to be processed in %i iterations" % (len(ids), len(iterations)))
     for points in iterations:
-        log.info("Processing ids in range %s" % str(points))
+        log.info("Processing ids in range [%s..%s](%i)" % (str(points[0]), str(points[-1], len(points))))
         extended_points = points
         extended_points.extend([j-1 for j in points])
         data = session_instance.query(MeasurementPoint).join(Measurement).\
-            filter(Measurement.type=='nacs').filter(MeasurementPoint.id.in_(extended_points)).\
+            filter(Measurement.type == 'nacs').filter(MeasurementPoint.id.in_(extended_points)).\
             order_by(Measurement.measurement_point_id).order_by(Measurement.type).all()
         data = {row.id: row for row in data}
         for key, row in data:
             if key in points:
-                session_instance.add(merge_pair(row, data.get(key-1, None)))
-        session_instance.commit()
+                merge_pair(row, data.get(key-1, None))
+        #session_instance.commit()
 
     # Generating 2 level for 'wats' measurements
     db.execute("INSERT INTO `measurements` (`measurement_point_id`, `device`,`type`, `level`, `value`, `error`, " +
-               "`correction`) SELECT `measurement_point_id`, `device`,`type`, `level`, 2, `error`, `correction` " +
+               "`correction`) SELECT `measurement_point_id`, `device`,`type`, 2, `value`, `error`, `correction` " +
                "FROM `measurements` WHERE `device`='wats';")
+
+
+def make_final_diffs():
+    log.info('Make diff_time')
+
+    #db.execute("INSERT INTO `diff_time` (`id_1`, `id_2`, `diff`) VALUES(1, NULL, 2);")
+    #db.execute("INSERT INTO `diff_time` (`id_1`, `id_2`, `diff`) SELECT `a`.`id`, `b`.`id`, " +
+    #           "TIME_TO_SEC(TIMEDIFF(`a`.`datetime`, `b`.`datetime`)) FROM `measurement_points` AS `a` " +
+    #           "JOIN `measurement_points` AS `b` ON `a`.`id`-1=`b`.`id` WHERE `a`.`id` > 1;")
+    #db.execute("INSERT INTO `diff_time` (`id_1`, `id_2`, `diff`) VALUES(NULL, " +
+    #           "(SELECT MAX(id) FROM `measurement_points`), 2);")
+    #db.execute("TRUNCATE `diff_buffer`;")
+
+    for table in cache.get('value_types', lambda: []):
+        log.info('Make diff_%s' % table['name'])
+
+        db.execute("INSERT INTO `diff_buffer`(`original_id`, `value`) SELECT `id`, `value` FROM `measurements` " +
+                   "WHERE device='%s' AND type='%s' AND level=2 ORDER BY `measurement_point_id`;" %
+                   (table['original'][0], table['original'][1]))
+        break
+        #db.execute("INSERT INTO `diff_%s` (`id_1`, `id_2`, `diff`) VALUES(1, NULL, 2);" % table['name'])
+        #db.execute("INSERT INTO `diff_%s` (`id_1`, `id_2`, `diff`) SELECT `a`.`id`, `b`.`id`, " % table['name'] +
+        #           "`a`.`value`-`b`.`value` FROM `diff_buffer` AS `a` JOIN `diff_buffer` AS `b` " +
+        #           "ON `a`.`id` - 1=`b`.`id` WHERE `a`.`id` > 1;")
+        #db.execute("INSERT INTO `diff_%s` (`id_1`, `id_2`, `diff`) VALUES(NULL, " % table['name'] +
+        #           "(SELECT MAX(id) FROM `diff_buffer`), 2);")
+        #
+        #db.execute("TRUNCATE `diff_buffer`;")

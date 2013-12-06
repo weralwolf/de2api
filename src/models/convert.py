@@ -2,39 +2,70 @@ __author__ = 'weralwolf'
 
 from models import MeasurementPoint, Measurement, BasicReorderNACS, BasicReorderWATS
 from common.db import db
-__session = db.session()
+from common.logger import log
+from sqlalchemy.orm import joinedload
 
 
-def __get_measurement_point(row):
-    res = __session.query(MeasurementPoint).filter_by(year=row.date_original_year,
-                                                      ut=row.date_original_ut,
-                                                      day_of_year=row.date_original_day_of_year)
+def __get_measurement_points(rows, do_search=True):
+    def get_unique(original):
+        result = []
+        for i in original:
+            if i not in result:
+                result.append(i)
+        return result
 
-    if res.count():
-        return res.one()
+    def make_from_row(row):
+        mp = MeasurementPoint()
+        mp.ut = row.date_original_ut
+        mp.datetime = row.date_general
+        mp.year = row.date_original_year
+        mp.day_of_year = row.date_original_year
+        mp.orbit = row.orbit
+        try:
+            mp.alt = row.alt
+            mp.lat = row.lat
+            mp.long = row.long
+            mp.l_sh = row.l_sh
+        except AttributeError:
+            mp.alt = row.altitude
+            mp.lat = row.latitude
+            mp.long = row.longitude
+            mp.l_sh = row.l
+        mp.lst = row.lst
+        mp.lmt = row.lmt
+        mp.inv_lat = row.inv_lat
+        mp.sza = row.sza
+        return mp
 
-    mp = MeasurementPoint()
-    mp.ut = row.date_original_ut
-    mp.datetime = row.date_general
-    mp.year = row.date_original_year
-    mp.day_of_year = row.date_original_year
-    mp.orbit = row.orbit
-    try:
-        mp.alt = row.alt
-        mp.lat = row.lat
-        mp.long = row.long
-        mp.l_sh = row.l_sh
-    except AttributeError:
-        mp.alt = row.altitude
-        mp.lat = row.latitude
-        mp.long = row.longitude
-        mp.l_sh = row.l
-    mp.lst = row.lst
-    mp.lmt = row.lmt
-    mp.inv_lat = row.inv_lat
-    mp.sza = row.sza
+    def search(source, row):
+        for i in source:
+            if i.datetime == row.date_general:
+                return i
+        return make_from_row(row)
 
-    return mp
+    __session = db.session()
+
+    mps = []
+    res = []
+    if do_search:
+        dates = get_unique([row.date_general for row in rows])
+        res = __session.query(MeasurementPoint).options(joinedload('data')).\
+            filter(MeasurementPoint.datetime.in_(dates)).order_by(MeasurementPoint.datetime).all()
+
+    __session.close()
+
+    log.info("Points to merge %i" % len(res))
+
+    for row in rows:
+        mp = search(res, row)
+        if isinstance(row, BasicReorderNACS):
+            mps.append(__nacs(mp, row))
+        elif isinstance(row, BasicReorderWATS):
+            mps.append(__wats(mp, row))
+        else:
+            log.error("Goes wrong with %s" % str(row))
+
+    return mps
 
 
 def __add_measurement(mp, params, general):
@@ -42,13 +73,11 @@ def __add_measurement(mp, params, general):
     mp.data.append(Measurement(**params))
 
 
-def __convert_nacs(row):
+def __nacs(mp, row):
     """
     @param row: BasicReorderNACS
     @return: MeasurementPoint with measurements belongs to it
     """
-    mp = __get_measurement_point(row)
-
     general = {'device': 'nacs'}
 
     __add_measurement(mp, {
@@ -80,7 +109,7 @@ def __convert_nacs(row):
     return mp
 
 
-def __convert_wats(row):
+def __wats(mp, row):
     """
     @param row: BasicReorderWATS
     @return: MeasurementPoint with measurements belongs to it
@@ -93,7 +122,6 @@ def __convert_wats(row):
             return 'vertical'
         else:
             return 'unknown'
-    mp = __get_measurement_point(row)
 
     general = {'device': 'wats'}
 
@@ -151,11 +179,8 @@ def __convert_wats(row):
     return mp
 
 
-def convert(data):
-    if isinstance(data, BasicReorderNACS):
-        return __convert_nacs(data)
-    elif isinstance(data, BasicReorderWATS):
-        return __convert_wats(data)
-    else:
+def convert(data, do_search=True):
+    if not len(data):
         return None
 
+    return __get_measurement_points(data, do_search)

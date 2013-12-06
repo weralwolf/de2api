@@ -172,7 +172,8 @@ class BasicReorderNACS(Base):
     sza = Column(Float, default=None)
 
     def __repr__(self):
-        return "<%s: y: %i, d: %i, ut: %i>" % (self.__tablename__, self.year, self.day_of_year, self.ut)
+      return "<%s: y: %i, d: %i, ut: %i>" % (self.__tablename__, self.date_original_year,
+                                             self.date_original_day_of_year, self.date_original_ut)
 
 
 class BasicReorderWATS(Base):
@@ -215,7 +216,8 @@ class BasicReorderWATS(Base):
     sza = Column(Float, default=None)
 
     def __repr__(self):
-      return "<%s: y: %i, d: %i, ut: %i>" % (self.__tablename__, self.year, self.day_of_year, self.ut)
+      return "<%s: y: %i, d: %i, ut: %i>" % (self.__tablename__, self.date_original_year,
+                                             self.date_original_day_of_year, self.date_original_ut)
 
 
 class ShortDiffNACS(Base):
@@ -253,11 +255,11 @@ class MeasurementPoint(Base):
     __tablename__ = 'measurement_points'
 
     id = Column(Integer(11, unsigned=True), primary_key=True)
-    datetime = Column(DateTime)
+    year = Column(Integer(3, unsigned=True), primary_key=True)
+    day_of_year = Column(Integer(3, unsigned=True), primary_key=True)
+    ut = Column(Integer(11, unsigned=True), primary_key=True)
 
-    year = Column(Integer(3, unsigned=True))
-    day_of_year = Column(Integer(3, unsigned=True))
-    ut = Column(Integer(11, unsigned=True))
+    datetime = Column(DateTime)
     orbit = Column(Integer(10, unsigned=True))
     alt = Column(Float, default=None)
     lat = Column(Float, default=None)
@@ -341,6 +343,17 @@ class TimeDiff(Base):
     diff_type = 'time'
 
     def __init__(self):
+        pass
+
+
+class DiffBuffer(Base):
+    __tablename__ = 'diff_buffer'
+
+    id = Column(Integer(11, unsigned=True), primary_key=True)
+    original_id = Column(Integer(11, unsigned=True))
+    value = Column(Float, default=None)
+
+    def __init__(self, *args, **kwargs):
         pass
 
 
